@@ -11,6 +11,8 @@ import FinishScreen from "./FinishScreen";
 import Footer from "./Footer";
 import Timer from "./Timer";
 
+const SEC_PER_QUESTION = 30;
+
 const initialState = {
   questions: [],
   index: 0, // cur question index
@@ -18,7 +20,7 @@ const initialState = {
   answer: null, // seleced option index of options
   points: 0,
   highScore: 0,
-  secondsRemaining: 10,
+  secondsRemaining: null,
   reloadKey: 0,
 };
 
@@ -29,7 +31,11 @@ function reduser(state, action) {
     case "dataFailed":
       return { ...state, status: "error" };
     case "start":
-      return { ...state, status: "active" };
+      return {
+        ...state,
+        status: "active",
+        secondsRemaining: state.questions.length * SEC_PER_QUESTION,
+      };
     case "newAnswer":
       const curQuestion = state.questions.at(state.index);
       return {
@@ -67,7 +73,6 @@ function reduser(state, action) {
       return {
         ...initialState,
         highScore: state.highScore,
-        // bump the reloadKey to trigger the effect
         reloadKey: state.reloadKey + 1,
         status: "loading",
       };
