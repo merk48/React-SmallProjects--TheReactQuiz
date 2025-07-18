@@ -5,18 +5,21 @@ import Loader from "./Loader";
 import Error from "./Error";
 import StartScreen from "./StartScreen";
 import Quesion from "./Quesion";
-import NextButton from "./NextButton";
+import MoveButton from "./MoveButton";
 import Progress from "./Progress";
 import FinishScreen from "./FinishScreen";
+import Footer from "./Footer";
+import Timer from "./Timer";
 
-const correctPoints = 10;
-const wrongPoints = 5;
 const initialState = {
   questions: [],
   index: 0, // cur question index
   status: "loading", // loading, error , ready, active, finished
   answer: null, // seleced option index of options
   points: 0,
+  highScore: 0,
+  secondsRemaining: 10,
+  reloadKey: 0,
 };
 
 function reduser(state, action) {
@@ -38,12 +41,35 @@ function reduser(state, action) {
             : state.points,
       };
     case "nextQuestion":
-      if (state.index === state.questions.length - 1)
-        return { ...state, status: "finished" };
       return {
         ...state,
         index: state.index + 1,
         answer: null,
+      };
+    case "finish":
+      return {
+        ...state,
+        status: "finished",
+        highScore:
+          state.points > state.highScore ? state.points : state.highScore,
+      };
+    case "tick":
+      return {
+        ...state,
+        secondsRemaining: state.secondsRemaining - 1,
+        status: state.secondsRemaining === 0 ? "finished" : state.status,
+      };
+
+    case "restart":
+      return { ...initialState, questions: state.questions, status: "ready" };
+
+    case "newQuiz":
+      return {
+        ...initialState,
+        highScore: state.highScore,
+        // bump the reloadKey to trigger the effect
+        reloadKey: state.reloadKey + 1,
+        status: "loading",
       };
     default:
       throw new Error("Unknown action");
@@ -51,12 +77,19 @@ function reduser(state, action) {
 }
 
 export default function App() {
-  const [{ questions, status, index, answer, points }, dispatch] = useReducer(
-    reduser,
-    initialState
-  );
-  const numQuestions = questions.length;
-  const maxPossiblePoints = questions.reduce((acc, q) => acc + q.points, 0);
+  const [
+    {
+      questions,
+      status,
+      index,
+      answer,
+      points,
+      highScore,
+      reloadKey,
+      secondsRemaining,
+    },
+    dispatch,
+  ] = useReducer(reduser, initialState);
 
   useEffect(() => {
     async function getQuestions() {
@@ -70,7 +103,10 @@ export default function App() {
     }
 
     getQuestions();
-  }, []);
+  }, [reloadKey]);
+
+  const numQuestions = questions.length;
+  const maxPossiblePoints = questions.reduce((acc, q) => acc + q.points, 0);
 
   return (
     <div className="app">
@@ -83,25 +119,46 @@ export default function App() {
         )}
         {status === "active" && (
           <>
-            <Progress
-              numQuestions={numQuestions}
-              index={index}
-              points={points}
-              maxPossiblePoints={maxPossiblePoints}
-              answer={answer}
-            />
-            <Quesion
-              question={questions[index]}
-              index={index}
-              dispatch={dispatch}
-              answer={answer}
-            ></Quesion>
-            <NextButton className="next" dispatch={dispatch} answer={answer} />
+            <Main>
+              <Progress
+                numQuestions={numQuestions}
+                index={index}
+                points={points}
+                maxPossiblePoints={maxPossiblePoints}
+                answer={answer}
+              />
+              <Quesion
+                question={questions[index]}
+                index={index}
+                dispatch={dispatch}
+                answer={answer}
+              />
+            </Main>
+            <Footer>
+              <Timer secondsRemaining={secondsRemaining} dispatch={dispatch} />
+              {answer !== null && (
+                <MoveButton
+                  type={`${
+                    index < numQuestions - 1 ? "nextQuestion" : "finish"
+                  }`}
+                  className={`${index < numQuestions - 1 ? "next" : "finish"}`}
+                  dispatch={dispatch}
+                  answer={answer}
+                >
+                  {index < numQuestions - 1 ? "Next" : "Show Score"}
+                </MoveButton>
+              )}
+            </Footer>
           </>
         )}
 
         {status === "finished" && (
-          <FinishScreen points={points} maxPossiblePoints={maxPossiblePoints} />
+          <FinishScreen
+            points={points}
+            maxPossiblePoints={maxPossiblePoints}
+            dispatch={dispatch}
+            highScore={highScore}
+          />
         )}
       </Main>
     </div>
