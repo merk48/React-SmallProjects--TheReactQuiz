@@ -1,10 +1,32 @@
-function MoveButton({ children, className, dispatch, type }) {
+import { useQuiz } from "../contexts/QuizContext";
+
+function MoveButton({ children, type, className }) {
+  const { dispatch, index, questions, status } = useQuiz();
+  const numQuestions = questions.length;
+
+  const isActive = status === "active" && type === undefined;
+  const actionType = isActive
+    ? index < numQuestions - 1
+      ? "nextQuestion"
+      : "finish"
+    : type;
+
+  const buttonLabel = isActive
+    ? index < numQuestions - 1
+      ? "Next"
+      : "Show Score"
+    : children;
+
+  const buttonClass = `btn btn-ui ${
+    className ?? (index < numQuestions - 1 ? "next" : "finish")
+  }`;
+
   return (
     <button
-      className={`btn btn-ui ${className}`}
-      onClick={() => dispatch({ type })}
+      className={buttonClass}
+      onClick={() => dispatch({ type: actionType })}
     >
-      {children}
+      {buttonLabel}
     </button>
   );
 }
